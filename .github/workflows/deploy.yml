@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Copy public files
+        run: |
+          cp public/404.html dist/404.html || true
+          cp public/manifest.json dist/manifest.json || true
+          cp public/sw.js dist/sw.js || true
+          cp public/icon.svg dist/icon.svg || true
+          cp public/icon-512.svg dist/icon-512.svg || true
+          cp public/icon-192.png dist/icon-192.png || true
+          cp public/icon-512.png dist/icon-512.png 2>/dev/null || echo "icon-512.png not found, using SVG"
+          cp public/icon-generator.html dist/icon-generator.html || true
+          cp public/create-icons.html dist/create-icons.html || true
+          cp public/ayutrace-logo.png dist/ayutrace-logo.png 2>/dev/null || echo "logo not found, skipping"
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
